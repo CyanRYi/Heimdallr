@@ -1,21 +1,24 @@
 package tech.sollabs.heimdallr.filter;
 
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.util.HashMap;
-import java.util.Map;
+import java.io.IOException;
 
 /**
- * username(id), password를 바탕으로 인증을 진행하기 위한 준비과정.
- * Spring Security가 전통적으로 사용하는 UsernamePasswordAuthenticationFilter를
- * 기준으로 확장하여, Request만 JSON Request를 읽어올 수 있도록 수정.
+ * Convert from JSON login request to UsernamePasswordAuthenticationToken
  *
- * 모든 입/출력은 JSON 형태로 주고 받습니다. 라는 기본제약 조건에 따름.
+ * TODO : check SecurityJackson2Modules and UsernamePasswordAuthenticationTokenDeserializer
  *
+ * @author Cyan Raphael Yi
+ * @since 0.2
  * @see UsernamePasswordAuthenticationFilter
  * @see tech.sollabs.heimdallr.configurer.JSONLoginConfigurer
  */
@@ -24,16 +27,15 @@ public class JSONUsernamePasswordAuthenticationFilter extends UsernamePasswordAu
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) {
 
-        //try {
-            Map<String, String> loginRequest = new HashMap<String, String>();// = mapper.readValue(request.getInputStream(), new TypeReference<Map<String, String>>() {});
+        try {
+            JSONObject loginRequest = (JSONObject) new JSONParser().parse(request.getReader());
 
             Authentication token = new UsernamePasswordAuthenticationToken(
                     loginRequest.get(getUsernameParameter()), loginRequest.get(getPasswordParameter()));
 
             return getAuthenticationManager().authenticate(token);
-
-        /*} catch (IOException e) {
+        } catch (ParseException | IOException e) {
             throw new BadCredentialsException("Invalid Login Request");
-        }*/
+        }
     }
 }

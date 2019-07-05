@@ -11,7 +11,8 @@ import tech.sollabs.heimdallr.filter.JSONUsernamePasswordAuthenticationFilter;
  *
  * TODO : AbstractHttpConfigurer를 직접 확장하고 기본 Success, Failure Handler를 관리.
  *
- * @param <T>
+ * @author Cyan Raphael Yi
+ * @since 0.2
  * @see org.springframework.security.config.annotation.web.configurers.FormLoginConfigurer
  * @see JSONUsernamePasswordAuthenticationFilter
  */
