@@ -1,4 +1,4 @@
-package tech.sollabs.heimdallr.filter;
+package tech.sollabs.heimdallr.web;
 
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -44,7 +44,7 @@ public class JSONUsernamePasswordAuthenticationFilterTests {
 
         Authentication result = filter.attemptAuthentication(request, new MockHttpServletResponse());
         assertNotNull(result);
-        assertEquals(((WebAuthenticationDetails) result.getDetails()).getRemoteAddress(), "127.0.0.1");
+        assertEquals("127.0.0.1", ((WebAuthenticationDetails) result.getDetails()).getRemoteAddress());
     }
 
     @Test
@@ -92,7 +92,7 @@ public class JSONUsernamePasswordAuthenticationFilterTests {
 
         Authentication result = filter.attemptAuthentication(request, new MockHttpServletResponse());
         assertNotNull(result);
-        assertEquals(((WebAuthenticationDetails) result.getDetails()).getRemoteAddress(), "127.0.0.1");
+        assertEquals("127.0.0.1", ((WebAuthenticationDetails) result.getDetails()).getRemoteAddress());
     }
 
     @Test
@@ -108,7 +108,7 @@ public class JSONUsernamePasswordAuthenticationFilterTests {
         filter.setAuthenticationManager(createAuthenticationManager());
 
         Authentication result = filter.attemptAuthentication(request, new MockHttpServletResponse());
-        assertEquals(result.getName(), "Cyan");
+        assertEquals("Cyan", result.getName());
     }
 
     @Test(expected = AuthenticationException.class)

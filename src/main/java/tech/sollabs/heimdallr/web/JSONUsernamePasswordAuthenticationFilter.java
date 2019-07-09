@@ -1,4 +1,4 @@
-package tech.sollabs.heimdallr.filter;
+package tech.sollabs.heimdallr.web;
 
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -8,6 +8,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import tech.sollabs.heimdallr.configurers.JSONLoginConfigurer;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -21,7 +22,7 @@ import java.io.IOException;
  * @author Cyan Raphael Yi
  * @since 0.2
  * @see UsernamePasswordAuthenticationFilter
- * @see tech.sollabs.heimdallr.configurer.JSONLoginConfigurer
+ * @see JSONLoginConfigurer
  */
 public class JSONUsernamePasswordAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 
