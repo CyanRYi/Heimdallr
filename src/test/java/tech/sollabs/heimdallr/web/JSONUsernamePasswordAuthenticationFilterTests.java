@@ -22,8 +22,6 @@ import static org.mockito.Mockito.when;
 /**
  * Tests {@link JSONUsernamePasswordAuthenticationFilter}
  *
- * This tests extends {@link org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilterTests}
- *
  * @author Cyan Raphael Yi
  * @since 0.3
  */

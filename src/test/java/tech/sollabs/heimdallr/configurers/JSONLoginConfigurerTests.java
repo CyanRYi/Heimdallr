@@ -45,7 +45,6 @@ public class JSONLoginConfigurerTests {
     @Before
     public void setup() {
         this.request = new MockHttpServletRequest();
-        this.request.setMethod("GET");
         this.response = new MockHttpServletResponse();
         this.chain = new MockFilterChain();
     }

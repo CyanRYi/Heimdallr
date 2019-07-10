@@ -2,49 +2,65 @@ package tech.sollabs.heimdallr;
 
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.web.authentication.WebAuthenticationDetails;
 import org.springframework.util.Assert;
 
 import java.util.Collection;
 
+/**
+ * An {@link org.springframework.security.core.Authentication} implementation that is
+ * designed for simple presentation of String case of Authentication Token(i.e jwt or oAuth access token).
+ * <p>
+ * The <code>principal</code> should be set with an <code>Object</code> that provides identification.
+ * The simplest such <code>Object</code> to use is <code>String</code>.
+ *
+ * @author Cyan Raphael Yi
+ * @since 0.2
+ */
 public class TokenAuthentication extends AbstractAuthenticationToken {
 
-    private String encodedJwt;
-    private String id;
+    private String token;
+    private Object principal;
 
     /**
-     * 인증되기 이전의 정보를 담는다.
-     * encodedJwt를 담아 Provider로 전달하기 위한 목적.
+     * This constructor can be safely used by any code that wishes to create a
+     * <code>TokenAuthentication</code> by Unknown Token, as the {@link #isAuthenticated()}
+     * will return <code>false</code>.
      *
-     * @param encodedJwt - Encoding 상태의 JWT String
-     * @param details - 인증 관련 Details 항목
      */
-    public TokenAuthentication(String encodedJwt, WebAuthenticationDetails details) {
+    public TokenAuthentication(String token) {
         super(null);
-        Assert.notNull(encodedJwt, "Token Cannot be null");
-        this.encodedJwt = encodedJwt;
+        Assert.notNull(token, "Token Cannot be null");
+        this.token = token;
         setAuthenticated(false);
-        super.setDetails(details);
     }
 
     /**
-     * 인증 이후의 subject와 권한을 담는다.
+     * This constructor should only be used by <code>TokenVerificationService</code>
+     * implementations that are satisfied with producing a trusted
+     * (i.e. {@link #isAuthenticated()} = <code>true</code>) authentication token.
      *
-     * @param id
+     * @param principal
      * @param authorities
      */
-    public TokenAuthentication(String id, Collection<GrantedAuthority> authorities) {
+    public TokenAuthentication(Object principal, Collection<GrantedAuthority> authorities) {
         super(authorities);
-        this.id = id;
+        this.principal = principal;
         super.setAuthenticated(true);
+
     }
 
-    public String getCredentials() {
-        return encodedJwt;
+    public String getToken() {
+        return token;
     }
 
-    public String getPrincipal() {
-        return id;
+    @Override
+    public Object getCredentials() {
+        return getToken();
+    }
+
+    @Override
+    public Object getPrincipal() {
+        return principal;
     }
 
     @Override
