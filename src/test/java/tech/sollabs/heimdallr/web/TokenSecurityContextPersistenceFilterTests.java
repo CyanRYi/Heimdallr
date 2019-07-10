@@ -7,7 +7,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import tech.sollabs.heimdallr.TokenVerificationService;
+import tech.sollabs.heimdallr.web.context.TokenVerificationService;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletRequest;
@@ -26,7 +26,7 @@ import static org.mockito.Mockito.*;
  */
 public class TokenSecurityContextPersistenceFilterTests {
 
-    TestingAuthenticationToken testToken = new TestingAuthenticationToken(
+    private TestingAuthenticationToken testToken = new TestingAuthenticationToken(
             "Cyan","Raphael Yi", "USER");
 
     private TokenVerificationService mockVerificationService = mock(TokenVerificationService.class);

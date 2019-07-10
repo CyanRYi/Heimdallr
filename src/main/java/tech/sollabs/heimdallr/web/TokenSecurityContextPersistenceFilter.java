@@ -5,7 +5,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.web.filter.GenericFilterBean;
-import tech.sollabs.heimdallr.TokenVerificationService;
+import tech.sollabs.heimdallr.web.context.TokenVerificationService;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
