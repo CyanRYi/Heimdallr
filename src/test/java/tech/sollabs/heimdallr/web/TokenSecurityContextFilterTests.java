@@ -18,12 +18,12 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Tests {@link TokenSecurityContextPersistenceFilter}
+ * Tests {@link TokenSecurityContextFilter}
  *
  * @author Cyan Raphael Yi
  * @since 0.3
  */
-public class TokenSecurityContextPersistenceFilterTests {
+public class TokenSecurityContextFilterTests {
 
     private TestingAuthenticationToken testToken = new TestingAuthenticationToken(
             "Cyan","Raphael Yi", "USER");
@@ -47,8 +47,8 @@ public class TokenSecurityContextPersistenceFilterTests {
         final FilterChain chain = mock(FilterChain.class);
         final MockHttpServletRequest request = new MockHttpServletRequest();
         final MockHttpServletResponse response = new MockHttpServletResponse();
-        TokenSecurityContextPersistenceFilter filter =
-                new TokenSecurityContextPersistenceFilter(mockVerificationService);
+        TokenSecurityContextFilter filter =
+                new TokenSecurityContextFilter(mockVerificationService, "Authorization");
         SecurityContextHolder.getContext().setAuthentication(testToken);
 
         filter.doFilter(request, response, chain);
@@ -61,8 +61,8 @@ public class TokenSecurityContextPersistenceFilterTests {
         final FilterChain chain = mock(FilterChain.class);
         final MockHttpServletRequest request = new MockHttpServletRequest();
         final MockHttpServletResponse response = new MockHttpServletResponse();
-        TokenSecurityContextPersistenceFilter filter =
-                new TokenSecurityContextPersistenceFilter(mockVerificationService);
+        TokenSecurityContextFilter filter =
+                new TokenSecurityContextFilter(mockVerificationService, "Authorization");
         SecurityContextHolder.getContext().setAuthentication(testToken);
         doThrow(new IOException()).when(chain).doFilter(any(ServletRequest.class),
                 any(ServletResponse.class));
@@ -80,10 +80,10 @@ public class TokenSecurityContextPersistenceFilterTests {
         final FilterChain chain = mock(FilterChain.class);
         final MockHttpServletRequest request = new MockHttpServletRequest();
         final MockHttpServletResponse response = new MockHttpServletResponse();
-        TokenSecurityContextPersistenceFilter filter =
-                new TokenSecurityContextPersistenceFilter(mockVerificationService);
+        TokenSecurityContextFilter filter =
+                new TokenSecurityContextFilter(mockVerificationService, "Authorization");
 
-        request.setAttribute(TokenSecurityContextPersistenceFilter.FILTER_APPLIED, Boolean.TRUE);
+        request.setAttribute(TokenSecurityContextFilter.FILTER_APPLIED, Boolean.TRUE);
         filter.doFilter(request, response, chain);
         verify(chain).doFilter(request, response);
         verify(mockVerificationService, never()).verifyToken(anyString());
@@ -96,8 +96,8 @@ public class TokenSecurityContextPersistenceFilterTests {
         final MockHttpServletResponse response = new MockHttpServletResponse();
         request.addHeader("Authorization", VALID_TOKEN);
 
-        TokenSecurityContextPersistenceFilter filter =
-                new TokenSecurityContextPersistenceFilter(mockVerificationService);
+        TokenSecurityContextFilter filter =
+                new TokenSecurityContextFilter(mockVerificationService, "Authorization");
 
         filter.doFilter(request, response, chain);
         verify(mockVerificationService, times(1)).verifyToken(VALID_TOKEN);
@@ -110,8 +110,8 @@ public class TokenSecurityContextPersistenceFilterTests {
         final MockHttpServletResponse response = new MockHttpServletResponse();
         request.addHeader("Invalid", VALID_TOKEN);
 
-        TokenSecurityContextPersistenceFilter filter =
-                new TokenSecurityContextPersistenceFilter(mockVerificationService);
+        TokenSecurityContextFilter filter =
+                new TokenSecurityContextFilter(mockVerificationService, "Authorization");
 
         filter.doFilter(request, response, chain);
         verify(mockVerificationService, never()).verifyToken(VALID_TOKEN);
@@ -124,8 +124,8 @@ public class TokenSecurityContextPersistenceFilterTests {
         final MockHttpServletResponse response = new MockHttpServletResponse();
         request.addHeader("Authorization", "Invalid_" + VALID_TOKEN);
 
-        TokenSecurityContextPersistenceFilter filter =
-                new TokenSecurityContextPersistenceFilter(mockVerificationService);
+        TokenSecurityContextFilter filter =
+                new TokenSecurityContextFilter(mockVerificationService, "Authorization");
 
         filter.doFilter(request, response, chain);
         verify(mockVerificationService, never()).verifyToken(VALID_TOKEN);
