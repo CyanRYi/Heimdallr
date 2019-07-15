@@ -83,6 +83,7 @@ public class TokenAuthenticationConfigurer
     }
 
     public TokenAuthenticationConfigurer onTokenRefresh(TokenIssueHandler tokenIssueHandler) {
+        Assert.notNull(tokenIssueHandler, "TokenIssueHandler is required.");
         this.tokenIssueHandler = tokenIssueHandler;
         return this;
     }
