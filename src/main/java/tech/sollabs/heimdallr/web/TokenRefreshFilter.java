@@ -20,12 +20,12 @@ import java.nio.file.AccessDeniedException;
 
 /**
  * Refresh Access Token.
- * When request matches {@link #requiresRefresh(HttpServletRequest)}
- * and
- *
+ * When request matches {@link #requiresRefresh(HttpServletRequest)} and already Authenticated,
+ * issue new Token by {@link TokenIssueHandler#issueNewToken(HttpServletRequest, HttpServletResponse, Authentication)}
  *
  * @see tech.sollabs.heimdallr.configurers.TokenAuthenticationConfigurer
  * @see tech.sollabs.heimdallr.web.TokenSecurityContextFilter
+ * @see TokenIssueHandler
  */
 public class TokenRefreshFilter extends GenericFilterBean {
 
