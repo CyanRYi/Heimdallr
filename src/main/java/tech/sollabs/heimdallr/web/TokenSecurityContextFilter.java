@@ -23,17 +23,13 @@ import java.util.Enumeration;
  * This class uses {@link TokenVerificationService} instead {@link SecurityContextRepository}
  * cause of token is valid for each request
  */
-public class TokenSecurityContextPersistenceFilter extends GenericFilterBean {
+public class TokenSecurityContextFilter extends GenericFilterBean {
 
     static final String FILTER_APPLIED = "__token_security_scpf_applied";
     private final String TOKEN_HEADER_NAME;
     private TokenVerificationService verificationService;
 
-    public TokenSecurityContextPersistenceFilter(TokenVerificationService verificationService) {
-        this(verificationService, "Authorization");
-    }
-
-    public TokenSecurityContextPersistenceFilter(TokenVerificationService verificationService, String headerName) {
+    public TokenSecurityContextFilter(TokenVerificationService verificationService, String headerName) {
         this.verificationService = verificationService;
         this.TOKEN_HEADER_NAME = headerName;
     }
