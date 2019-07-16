@@ -2,10 +2,11 @@ package tech.sollabs.heimdallr.configurers;
 
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.logout.LogoutFilter;
 import org.springframework.security.web.context.SecurityContextPersistenceFilter;
 import org.springframework.util.Assert;
-import tech.sollabs.heimdallr.handler.TokenIssueHandler;
 import tech.sollabs.heimdallr.web.TokenRefreshFilter;
 import tech.sollabs.heimdallr.web.TokenSecurityContextFilter;
 import tech.sollabs.heimdallr.web.context.TokenVerificationService;
@@ -52,7 +53,8 @@ public class TokenAuthenticationConfigurer
     private TokenVerificationService verificationService;
 
     private String refreshUrl;
-    private TokenIssueHandler tokenIssueHandler;
+    private AuthenticationSuccessHandler refreshSuccessHandler;
+    private AuthenticationFailureHandler refreshFailureHandler;
 
     /**
      * @param verificationService - TokenVerificationService verify token
@@ -82,9 +84,13 @@ public class TokenAuthenticationConfigurer
         return this;
     }
 
-    public TokenAuthenticationConfigurer onTokenRefresh(TokenIssueHandler tokenIssueHandler) {
-        Assert.notNull(tokenIssueHandler, "TokenIssueHandler is required.");
-        this.tokenIssueHandler = tokenIssueHandler;
+    public TokenAuthenticationConfigurer onRefreshSuccess(AuthenticationSuccessHandler refreshSuccessHandler) {
+        this.refreshSuccessHandler = refreshSuccessHandler;
+        return this;
+    }
+
+    public TokenAuthenticationConfigurer onRefreshFailure(AuthenticationFailureHandler refreshFailureHandler) {
+        this.refreshFailureHandler = refreshFailureHandler;
         return this;
     }
 
@@ -102,7 +108,7 @@ public class TokenAuthenticationConfigurer
                 .addFilterAt(tokenFilter, SecurityContextPersistenceFilter.class);
 
         if (refreshUrl != null) {
-            TokenRefreshFilter refreshFilter = new TokenRefreshFilter(refreshUrl, tokenIssueHandler);
+            TokenRefreshFilter refreshFilter = new TokenRefreshFilter(refreshUrl, refreshSuccessHandler);
             http.addFilterAt(refreshFilter, LogoutFilter.class);
         }
     }

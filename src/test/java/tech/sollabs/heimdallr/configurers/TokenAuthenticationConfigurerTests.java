@@ -10,15 +10,14 @@ import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockServletContext;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.FilterChainProxy;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import tech.sollabs.heimdallr.handler.TokenIssueHandler;
 import tech.sollabs.heimdallr.web.context.TokenVerificationService;
 
 import javax.servlet.http.HttpServletRequest;
@@ -40,7 +39,7 @@ public class TokenAuthenticationConfigurerTests {
     private TokenVerificationService mockVerificationService;
 
     @Autowired(required = false)
-    private TokenIssueHandler mockTokenIssueHandler;
+    private AuthenticationSuccessHandler mockTokenIssueHandler;
 
     private MockHttpServletRequest request;
     private MockHttpServletResponse response;
@@ -130,7 +129,7 @@ public class TokenAuthenticationConfigurerTests {
         this.springSecurityFilterChain.doFilter(this.request, this.response, this.chain);
 
         verify(mockTokenIssueHandler, times(1))
-                .issueNewToken(any(HttpServletRequest.class), any(HttpServletResponse.class), eq(testToken));
+                .onAuthenticationSuccess(any(HttpServletRequest.class), any(HttpServletResponse.class), eq(testToken));
         assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 
@@ -143,15 +142,11 @@ public class TokenAuthenticationConfigurerTests {
         request.addHeader("Authorization",  "Invalid_" + VALID_TOKEN);
         request.setServletPath("/refresh");
 
-        try {
-            this.springSecurityFilterChain.doFilter(this.request, this.response, this.chain);
-            fail("AccessDeniedException should have been thrown");
-        } catch (AccessDeniedException expected) {
-        } finally {
-            verify(mockTokenIssueHandler, never())
-                    .issueNewToken(any(HttpServletRequest.class), any(HttpServletResponse.class), eq(testToken));
-            assertNull(SecurityContextHolder.getContext().getAuthentication());
-        }
+        this.springSecurityFilterChain.doFilter(this.request, this.response, this.chain);
+        verify(mockTokenIssueHandler, never())
+                .onAuthenticationSuccess(any(HttpServletRequest.class), any(HttpServletResponse.class), eq(testToken));
+        assertEquals(response.getStatus(), HttpStatus.UNAUTHORIZED.value());
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 
     @EnableWebSecurity
@@ -163,12 +158,12 @@ public class TokenAuthenticationConfigurerTests {
                     .and()
                     .apply(new TokenAuthenticationConfigurer(tokenVerificationService())
                             .enableRefresh("/refresh")
-                            .onTokenRefresh(tokenIssueHandler()));
+                            .onRefreshSuccess(tokenIssueHandler()));
         }
 
         @Bean
-        public TokenIssueHandler tokenIssueHandler() {
-            return mock(TokenIssueHandler.class);
+        public AuthenticationSuccessHandler tokenIssueHandler() {
+            return mock(AuthenticationSuccessHandler.class);
         }
 
         @Bean

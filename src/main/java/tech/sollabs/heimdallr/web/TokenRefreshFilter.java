@@ -1,75 +1,59 @@
 package tech.sollabs.heimdallr.web;
 
-import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.event.InteractiveAuthenticationSuccessEvent;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
-import org.springframework.security.web.util.matcher.RequestMatcher;
+import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
-import org.springframework.web.filter.GenericFilterBean;
-import tech.sollabs.heimdallr.handler.TokenIssueHandler;
+import tech.sollabs.heimdallr.handler.SimpleResponseAuthenticationFailureHandler;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
  * Refresh Access Token.
- * When request matches {@link #requiresRefresh(HttpServletRequest)} and already Authenticated,
- * issue new Token by {@link TokenIssueHandler#issueNewToken(HttpServletRequest, HttpServletResponse, Authentication)}
+ * When request already Authenticated,
+ * issue new Token by {@link AuthenticationSuccessHandler)}
  *
  * @see tech.sollabs.heimdallr.configurers.TokenAuthenticationConfigurer
  * @see tech.sollabs.heimdallr.web.TokenSecurityContextFilter
- * @see TokenIssueHandler
  */
-public class TokenRefreshFilter extends GenericFilterBean {
+public class TokenRefreshFilter extends AbstractAuthenticationProcessingFilter {
 
-    private RequestMatcher refreshRequestMatcher;
-    private TokenIssueHandler tokenIssueHandler;
-
-    public TokenRefreshFilter(String refreshUrl, TokenIssueHandler tokenIssueHandler) {
-        Assert.isTrue(StringUtils.hasLength(refreshUrl),
-                refreshUrl + " isn't a valid URL");
-        Assert.notNull(tokenIssueHandler, "TokenIssueHandler is required.");
-        this.refreshRequestMatcher = new AntPathRequestMatcher(refreshUrl);
-        this.tokenIssueHandler = tokenIssueHandler;
+    public TokenRefreshFilter(String defaultFilterProcessesUrl, AuthenticationSuccessHandler refreshSuccessHandler) {
+        super(defaultFilterProcessesUrl);
+        Assert.notNull(refreshSuccessHandler, "AuthenticationSuccessHandler is required to return new Token.");
+        super.setAuthenticationSuccessHandler(refreshSuccessHandler);
+        super.setAuthenticationFailureHandler(new SimpleResponseAuthenticationFailureHandler());
     }
 
     @Override
-    public void doFilter(ServletRequest req, ServletResponse res, FilterChain chain)
-            throws IOException, ServletException {
-        HttpServletRequest request = (HttpServletRequest) req;
-        HttpServletResponse response = (HttpServletResponse) res;
+    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException, IOException, ServletException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        if (requiresRefresh(request)) {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-            if (authentication == null || !authentication.isAuthenticated()) {
-                throw new AccessDeniedException("Token Refreshing must be process after Authentication");
-            }
-
-            tokenIssueHandler.issueNewToken(request, response, authentication);
-
-            SecurityContextHolder.clearContext();
-            return;
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new BadCredentialsException("Token Refreshing must be process after Authentication");
         }
 
-        chain.doFilter(request, response);
+        return authentication;
     }
 
-    /**
-     * Allow subclasses to modify when a refresh should take place.
-     *
-     * @param request the request
-     *
-     * @return <code>true</code> if refresh should occur, <code>false</code> otherwise
-     */
-    protected boolean requiresRefresh(HttpServletRequest request) {
-        return refreshRequestMatcher.matches(request);
+    @Override
+    protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authResult) throws IOException, ServletException {
+
+        // Fire event
+        if (this.eventPublisher != null) {
+            eventPublisher.publishEvent(new InteractiveAuthenticationSuccessEvent(
+                    authResult, this.getClass()));
+        }
+
+        getSuccessHandler().onAuthenticationSuccess(request, response, authResult);
+        SecurityContextHolder.clearContext();
     }
 }

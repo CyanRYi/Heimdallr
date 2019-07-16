@@ -3,18 +3,20 @@ package tech.sollabs.heimdallr.web;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import tech.sollabs.heimdallr.handler.TokenIssueHandler;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 
 import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import java.io.IOException;
+
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 /**
@@ -28,17 +30,17 @@ public class TokenRefreshFilterTests {
     private TestingAuthenticationToken testToken = new TestingAuthenticationToken(
             "Cyan","Raphael Yi", "USER");
 
-    private TokenIssueHandler mockTokenIssueHandler = mock(TokenIssueHandler.class);
+    private AuthenticationSuccessHandler mockTokenIssueHandler = mock(AuthenticationSuccessHandler.class);
 
     @Before
-    public void setUp() {
+    public void setUp() throws IOException, ServletException {
         doNothing()
                 .when(mockTokenIssueHandler)
-                .issueNewToken(any(MockHttpServletRequest.class), any(MockHttpServletResponse.class), any(Authentication.class));
+                .onAuthenticationSuccess(any(MockHttpServletRequest.class), any(MockHttpServletResponse.class), any(Authentication.class));
     }
 
     @After
-    public void clearContext() {
+    public void tearDown() {
         SecurityContextHolder.clearContext();
     }
 
@@ -54,7 +56,7 @@ public class TokenRefreshFilterTests {
 
         filter.doFilter(request, response, chain);
 
-        verify(mockTokenIssueHandler, times(1)).issueNewToken(request, response, testToken);
+        verify(mockTokenIssueHandler, times(1)).onAuthenticationSuccess(request, response, testToken);
         assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 
@@ -70,7 +72,7 @@ public class TokenRefreshFilterTests {
 
         filter.doFilter(request, response, chain);
 
-        verify(mockTokenIssueHandler, never()).issueNewToken(request, response, testToken);
+        verify(mockTokenIssueHandler, never()).onAuthenticationSuccess(request, response, testToken);
     }
 
     @Test
@@ -85,12 +87,8 @@ public class TokenRefreshFilterTests {
                 new TestingAuthenticationToken(testToken.getPrincipal(), testToken.getPrincipal());
         SecurityContextHolder.getContext().setAuthentication(notAuthenticatedToken);
 
-        try {
-            filter.doFilter(request, response, chain);
-            fail("AccessDeniedException should have been thrown");
-        } catch (AccessDeniedException expected) {
-        } finally {
-            verify(mockTokenIssueHandler, never()).issueNewToken(request, response, notAuthenticatedToken);
-        }
+        filter.doFilter(request, response, chain);
+        assertEquals(response.getStatus(), HttpStatus.UNAUTHORIZED.value());
+        verify(mockTokenIssueHandler, never()).onAuthenticationSuccess(request, response, notAuthenticatedToken);
     }
 }
