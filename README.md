@@ -71,8 +71,8 @@ public class Config extends TokenWebSecurityConfigurerAdapter {
 
 ### If you cannot use TokenWebSecurityConfigurerAdapter for various reason
 1. Apply TokenAuthenticationConfigurer override configure(http) method.
-        - Constructor of TokenAuthenticationConfigurer need TokenVerificationService parameter
-        - String headerName parameter is optional(default value is "Authorization")
+    - Constructor of TokenAuthenticationConfigurer need TokenVerificationService parameter
+    - String headerName parameter is optional(default value is "Authorization")
 
 ```java
 @EnableWebSecurity
