@@ -109,6 +109,10 @@ public class TokenAuthenticationConfigurer
 
         if (refreshUrl != null) {
             TokenRefreshFilter refreshFilter = new TokenRefreshFilter(refreshUrl, refreshSuccessHandler);
+
+            if (refreshFailureHandler != null) {
+                refreshFilter.setAuthenticationFailureHandler(refreshFailureHandler);
+            }
             http.addFilterAt(refreshFilter, LogoutFilter.class);
         }
     }

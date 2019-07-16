@@ -1,10 +1,11 @@
 package tech.sollabs.heimdallr.configuration;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import tech.sollabs.heimdallr.configurers.TokenAuthenticationConfigurer;
+import tech.sollabs.heimdallr.handler.SimpleResponseAuthenticationFailureHandler;
 import tech.sollabs.heimdallr.web.context.TokenVerificationService;
 
 /**
@@ -17,12 +18,7 @@ import tech.sollabs.heimdallr.web.context.TokenVerificationService;
  *
  * @see TokenAuthenticationConfigurer
  */
-public class TokenWebSecurityConfigurerAdapter extends WebSecurityConfigurerAdapter {
-
-    @Autowired(required = false)
-    private TokenVerificationService tokenVerificationService;
-    @Autowired(required = false)
-    private AuthenticationSuccessHandler tokenRefreshSuccessHandler;
+public abstract class TokenWebSecurityConfigurerAdapter extends WebSecurityConfigurerAdapter {
 
     /**
      * Override this method to configure Token Security.
@@ -37,24 +33,24 @@ public class TokenWebSecurityConfigurerAdapter extends WebSecurityConfigurerAdap
 
         http.apply(new TokenAuthenticationConfigurer(tokenVerificationService())
                         .enableRefresh("/refresh")
-                        .onRefreshSuccess(tokenRefreshSuccessHandler()));
+                        .onRefreshSuccess(tokenRefreshSuccessHandler())
+                        .onRefreshFailure(tokenRefreshFailureHandler()));
     }
 
     /**
-     * Provide {@link TokenVerificationService} Spring bean autowired
-     * or override this method to create new object
+     * Override this method to provide {@link TokenVerificationService} for Token Authentication
      */
-    protected TokenVerificationService tokenVerificationService() {
-        return tokenVerificationService;
-    }
+    protected abstract TokenVerificationService tokenVerificationService();
 
     /**
-     * Provide {@link AuthenticationSuccessHandler} Spring bean autowired
-     * or override this method to create new object.
-     *
-     * Create instance of {@link AuthenticationSuccessHandler} to return new Token when success token refresh.
+     * Override this method to create {@link AuthenticationSuccessHandler} to return new Token when success token refresh.
      */
-    protected AuthenticationSuccessHandler tokenRefreshSuccessHandler() {
-        return tokenRefreshSuccessHandler;
+    protected abstract AuthenticationSuccessHandler tokenRefreshSuccessHandler();
+
+    /**
+     * Override this method to create {@link AuthenticationFailureHandler} when token refresh failed.
+     */
+    protected AuthenticationFailureHandler tokenRefreshFailureHandler() {
+        return new SimpleResponseAuthenticationFailureHandler();
     }
 }

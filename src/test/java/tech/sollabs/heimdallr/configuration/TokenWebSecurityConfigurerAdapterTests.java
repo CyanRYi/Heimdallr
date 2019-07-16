@@ -4,9 +4,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockFilterChain;
@@ -17,6 +15,7 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.FilterChainProxy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -30,6 +29,8 @@ import org.springframework.security.web.session.SessionManagementFilter;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
+import tech.sollabs.heimdallr.configurers.TokenAuthenticationConfigurer;
+import tech.sollabs.heimdallr.handler.SimpleResponseAuthenticationFailureHandler;
 import tech.sollabs.heimdallr.handler.SimpleResponseAuthenticationSuccessHandler;
 import tech.sollabs.heimdallr.web.TokenRefreshFilter;
 import tech.sollabs.heimdallr.web.TokenSecurityContextFilter;
@@ -117,6 +118,27 @@ public class TokenWebSecurityConfigurerAdapterTests {
         assertThat(response.getStatus(), is(HttpStatus.FOUND.value()));
     }
 
+    @Test
+    public void testTokenRefresh() throws Exception {
+        loadConfig(Config.class);
+        request.setServletPath("/refresh");
+        request.addHeader("Authorization", "VALID_TOKEN");
+        springSecurityFilterChain.doFilter(request, response, chain);
+
+        assertThat(response.getStatus(), is(HttpStatus.OK.value()));
+        assertThat(response.getHeader("Access-Token"), is("NEW-TOKEN"));
+    }
+
+    @Test
+    public void testInvalidTokenRefresh() throws Exception {
+        loadConfig(Config.class);
+        request.setServletPath("/refresh");
+        request.addHeader("Authorization", "INVALID_TOKEN");
+        springSecurityFilterChain.doFilter(request, response, chain);
+
+        assertThat(response.getStatus(), is(HttpStatus.UNAUTHORIZED.value()));
+    }
+
     @EnableWebMvc
     @EnableWebSecurity
     @Configuration
@@ -137,14 +159,23 @@ public class TokenWebSecurityConfigurerAdapterTests {
 
         @Override
         protected AuthenticationSuccessHandler tokenRefreshSuccessHandler() {
-            return mock(AuthenticationSuccessHandler.class);
+            return new SimpleResponseAuthenticationSuccessHandler() {
+                @Override
+                protected MultiValueMap<String, String> determineResponseHeader(HttpServletRequest request, Authentication authentication) {
+                    HttpHeaders header = new HttpHeaders();
+                    header.set("Access-Token", "NEW-TOKEN");
+                    return header;
+                }
+            };
         }
     }
 
     @Test
     public void testTokenAuthenticationOnCustomConfig() throws Exception {
         loadConfig(CustomConfig.class);
-        request.addHeader("Authorization", "VALID_TOKEN");
+
+        request.addHeader("Authorization-token", "VALID_TOKEN");
+
         springSecurityFilterChain.doFilter(request, response, chain);
 
         assertThat(response.getStatus(), is(HttpStatus.OK.value()));
@@ -153,17 +184,19 @@ public class TokenWebSecurityConfigurerAdapterTests {
     @Test
     public void testInvalidTokenAuthenticationOnCustomConfig() throws Exception {
         loadConfig(CustomConfig.class);
-        request.addHeader("Authorization", "INVALID_TOKEN");
+
+        request.addHeader("Authorization-token", "INVALID_TOKEN");
+
         springSecurityFilterChain.doFilter(request, response, chain);
 
-        assertThat(response.getStatus(), is(HttpStatus.FOUND.value()));
+        assertThat(response.getStatus(), is(HttpStatus.FORBIDDEN.value()));
     }
 
     @Test
     public void testTokenRefreshOnCustomConfig() throws Exception {
         loadConfig(CustomConfig.class);
-        request.setServletPath("/refresh");
-        request.addHeader("Authorization", "VALID_TOKEN");
+        request.setServletPath("/refresh-token");
+        request.addHeader("Authorization-token", "VALID_TOKEN");
         springSecurityFilterChain.doFilter(request, response, chain);
 
         assertThat(response.getStatus(), is(HttpStatus.OK.value()));
@@ -177,51 +210,54 @@ public class TokenWebSecurityConfigurerAdapterTests {
         request.addHeader("Authorization", "INVALID_TOKEN");
         springSecurityFilterChain.doFilter(request, response, chain);
 
-        assertThat(response.getStatus(), is(HttpStatus.UNAUTHORIZED.value()));
+        assertThat(response.getStatus(), is(HttpStatus.FORBIDDEN.value()));
     }
 
+    @EnableWebMvc
+    @EnableWebSecurity
     @Configuration
     static class CustomConfig extends TokenWebSecurityConfigurerAdapter {
 
-        @Order(1)
-        @EnableWebSecurity
-        static class TokenConfig extends TokenWebSecurityConfigurerAdapter {
-            @Override
-            protected void configure(HttpSecurity http) throws Exception {
-                super.configure(http);
-                http.authorizeRequests()
-                        .anyRequest().hasRole("USER");
-            }
+        @Override
+        protected void configure(HttpSecurity http) throws Exception {
+            http.authorizeRequests()
+                    .anyRequest().hasRole("USER")
+                    .and()
+                    .apply(new TokenAuthenticationConfigurer(tokenVerificationService(), "Authorization-Token")
+                        .enableRefresh("/refresh-token")
+                        .onRefreshSuccess(tokenRefreshSuccessHandler())
+                        .onRefreshFailure(new SimpleResponseAuthenticationFailureHandler() {
+                            @Override
+                            protected int determineResponseStatus(HttpServletRequest request, AuthenticationException exception) {
+                                return HttpStatus.FORBIDDEN.value();
+                            }
+                        })
+                    );
         }
 
-        @Order(2)
-        @Configuration
-        static class DefaultConfig {
+        @Override
+        protected TokenVerificationService tokenVerificationService() {
+            TokenVerificationService mockVerificationService = mock(TokenVerificationService.class);
 
-            @Bean
-            public TokenVerificationService tokenVerificationService() {
-                TokenVerificationService mockVerificationService = mock(TokenVerificationService.class);
+            TestingAuthenticationToken testToken = new TestingAuthenticationToken(
+                    "Cyan","Raphael Yi", "ROLE_USER");
 
-                TestingAuthenticationToken testToken = new TestingAuthenticationToken(
-                        "Cyan","Raphael Yi", "ROLE_USER");
+            doReturn(testToken)
+                    .when(mockVerificationService).verifyToken("VALID_TOKEN");
 
-                doReturn(testToken)
-                        .when(mockVerificationService).verifyToken("VALID_TOKEN");
+            return mockVerificationService;
+        }
 
-                return mockVerificationService;
-            }
-
-            @Bean
-            public AuthenticationSuccessHandler tokenRefreshSuccessHandler() {
-                return new SimpleResponseAuthenticationSuccessHandler() {
-                    @Override
-                    protected MultiValueMap<String, String> determineResponseHeader(HttpServletRequest request, Authentication authentication) {
-                        HttpHeaders header = new HttpHeaders();
-                        header.set("Access-Token", "NEW-TOKEN");
-                        return header;
-                    }
-                };
-            }
+        @Override
+        protected AuthenticationSuccessHandler tokenRefreshSuccessHandler() {
+            return new SimpleResponseAuthenticationSuccessHandler() {
+                @Override
+                protected MultiValueMap<String, String> determineResponseHeader(HttpServletRequest request, Authentication authentication) {
+                    HttpHeaders header = new HttpHeaders();
+                    header.set("Access-Token", "NEW-TOKEN");
+                    return header;
+                }
+            };
         }
     }
 
